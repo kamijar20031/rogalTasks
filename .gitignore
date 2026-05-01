@@ -2,3 +2,6 @@ backend/.env
 backend/output.txt
 venv/
 backend/__pycache__/
+backend/output.log
+backend/firebase.json
+frontend/output.log

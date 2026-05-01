@@ -1,4 +1,6 @@
-[2026-03-23 22:40:59 +0100] [1340] [INFO] Starting gunicorn 23.0.0
-[2026-03-23 22:40:59 +0100] [1340] [INFO] Listening at: http://192.168.1.101:5000 (1340)
-[2026-03-23 22:40:59 +0100] [1340] [INFO] Using worker: sync
-[2026-03-23 22:40:59 +0100] [1474] [INFO] Booting worker with pid: 1474
+[2026-04-29 20:34:52 +0200] [1435] [INFO] Starting gunicorn 23.0.0
+[2026-04-29 20:34:52 +0200] [1435] [INFO] Listening at: http://192.168.1.101:5000 (1435)
+[2026-04-29 20:34:52 +0200] [1435] [INFO] Using worker: sync
+[2026-04-29 20:34:52 +0200] [1484] [INFO] Booting worker with pid: 1484
+[2026-05-01 10:56:32 +0200] [1484] [INFO] Parent changed, shutting down: <Worker 1484>
+[2026-05-01 10:56:32 +0200] [1484] [INFO] Worker exiting (pid: 1484)

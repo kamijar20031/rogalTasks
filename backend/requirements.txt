@@ -9,3 +9,4 @@ mysql-connector-python
 flask-mysqldb 
 discord
 gunicorn
+firebase-admin

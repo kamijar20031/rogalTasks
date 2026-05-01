@@ -3,9 +3,11 @@ import os
 from dotenv import load_dotenv
 import datetime
 import discord
+import firebase_admin
+from firebase_admin import credentials, messaging
 
 load_dotenv()
-
+cred = credentials.Certificate("firebase.json")
 # SQL data
 DATABASE = os.getenv('DB')
 HOST = "localhost"
@@ -65,6 +67,9 @@ if current.strftime("%H")=='03':
 
 mycursor.execute("SELECT ID, ilePowiadomien, discord FROM uzytkownicy;")
 userData = mycursor.fetchall()
+firebase_admin.initialize_app(cred)
+
+messageMap = {}
 for user in userData:
     if int(user[1])!=0 and int(user[2]!=0):
         # Generowanie godzin wysylania na bazie podanych ilosci powiadomien
@@ -77,17 +82,21 @@ for user in userData:
                 lst.append(f"0{temp}")
         if current.strftime("%H") in lst:
             toSend = []
-            mycursor.execute(f"SELECT zadania.nazwa, TIME(zadania.data), discord, prnt.nazwa, uzytkownicy.ID FROM zadania JOIN uzytkownicy ON uzytkownicy.ID=zadania.uzytkownik LEFT JOIN zadania AS prnt ON prnt.ID=zadania.parentID WHERE zadania.status!=100 AND DATE(zadania.data)='{current.strftime("%Y-%m-%d")}' AND uzytkownicy.ID={user[0]};")
+            mycursor.execute(f"SELECT zadania.nazwa, TIME(zadania.data), discord, prnt.nazwa, uzytkownicy.androidToken FROM zadania JOIN uzytkownicy ON uzytkownicy.ID=zadania.uzytkownik LEFT JOIN zadania AS prnt ON prnt.ID=zadania.parentID WHERE zadania.status!=100 AND DATE(zadania.data)='{current.strftime("%Y-%m-%d")}' AND uzytkownicy.ID={user[0]};")
             zadData = mycursor.fetchall()
             for zadanie in zadData:
                 # To bedzie zmieniane u kazdego uzytkownika
                 discordID = zadanie[2]
+                androidToken = zadanie[4]
                 if discordID!=0:
                     parent = ""
                     if zadanie[3]!=None:
                         parent = f" o rodzicu {zadanie[3]}"
                     msg = f"Pamiętaj o wykonaniu swojego zadania {zadanie[0]} o godzinie {zadanie[1]}{parent}!"
-                    toSend.append((discordID, msg))
+                    if not user[0] in messageMap.keys():
+                        messageMap[user[0]] = [discordID, msg, androidToken]
+                    else:
+                        messageMap[user[0]][1] += f"\n{msg}"
 
             # Nie chcialem sie meczyc z porownywaniem daty w pythonie bo latwiej to zrobic po prostu w SQL
             mycursor.execute(f"SELECT zadania.nazwa, DATE(zadania.data), discord, prnt.nazwa FROM zadania JOIN uzytkownicy ON uzytkownicy.ID=zadania.uzytkownik LEFT JOIN zadania AS prnt ON zadania.parentID=prnt.ID WHERE zadania.status!=100 AND DATE(zadania.data)<'{current.strftime("%Y-%m-%d")}' AND uzytkownicy.ID={user[0]};")
@@ -100,25 +109,40 @@ for user in userData:
                 discordID = zadanie[2]
                 if discordID!=0:
                     msg = f"Pamiętaj o wykonaniu swojego zaległego zadania {zadanie[0]} z dnia {zadanie[1]}{parent}!"
-                    toSend.append((discordID, msg))
+                    if not user[0] in messageMap.keys():
+                        messageMap[user[0]] = [discordID, msg, androidToken]
+                    else:
+                        messageMap[user[0]][1] += f"\n{msg}"
 
 
-            # Wysylanie zapisanych wiadomosci przez bota
-            intents = discord.Intents.default()
-            intents.message_content = True
-            intents.members = True  # Needed to fetch users
-            client = discord.Client(intents=intents)
-            @client.event
-            async def on_ready():
-                print(f"Logged in as {client.user}")
-                for messageData in toSend:
-                    try:
-                        user = await client.fetch_user(messageData[0])
-                        await user.send(messageData[1])
-                        print("DM sent successfully!")
-                    except Exception as e:
-                        print(f"Failed to send DM: {e}")
+for key, val in messageMap.items():
+    # Wysylanie zapisanych wiadomosci przez bota
+    if val[0]!=0:
+        intents = discord.Intents.default()
+        intents.message_content = True
+        intents.members = True
+        client = discord.Client(intents=intents)
+        @client.event
+        async def on_ready():
+            print(f"Logged in as {client.user}")
+            try:
+                user = await client.fetch_user(val[0])
+                await user.send(val[1])
+                print("DM sent successfully!")
+            except Exception as e:
+                print(f"Failed to send DM: {e}")
 
-                await client.close()  # Exit after sending
-
-            client.run(TOKEN)
+            await client.close()
+                
+        client.run(TOKEN)
+    # Wysylanie przez Firebase
+    if val[2]!= "":
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title="Rogal Tasks",
+                body=val[1]
+            ),
+            token=val[2]
+        )
+        response = messaging.send(message)
+        print("Android sent:", response)

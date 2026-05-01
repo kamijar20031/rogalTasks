@@ -76,6 +76,9 @@ def wyslijHarmo(ID):
         cursor.execute(f"SELECT * FROM harmonogram WHERE uzytkownik={ID};")
         temp = cursor.fetchall()
         cursor.close()
+        for row in temp:
+            if row["dni"]:
+                row["dni"] = json.loads(row["dni"])
         return jsonify({"harmonogram" : temp})
     
 @app.route("/harmonogramCreate/<int:IDuser>", methods=["POST"])
@@ -118,20 +121,6 @@ def register():
         mysql.connection.commit()
         cursor.close()
         return jsonify({"message" : "Dodano uzytkownika do bazy!"}), 206
-    
-    
-@app.route("/validateData", methods=["POST"])
-def validate():
-    login = request.json.get("login")
-    haslo = request.json.get("haslo")
-    if haslo!="" and login!="":
-        return jsonify({"message" : "Poprawne dane!"}), 207
-    elif haslo!="":
-        return jsonify({"message" : "Wpisz login!"}), 406
-    elif login!="":
-        return jsonify({"message" : "Wpisz hasło!"}), 407
-    return jsonify({"message" : "Wpisz login i hasło!"}), 409
-
     
 @app.route("/login", methods=["POST"])
 def login():
@@ -197,3 +186,15 @@ def updateInfoTask(ID):
     mysql.connection.commit()
     cursor.close()
     return jsonify({"wynik": "Zaktualizowano zadanie!"}),213
+
+@app.route("/updateFCM/<int:ID>", methods=["PATCH"])
+def updateFCM(ID):
+    fcm = request.json
+    cursor = mysql.connection.cursor()
+    cursor.execute(f"UPDATE uzytkownicy SET androidToken='{fcm}' WHERE ID={ID};")
+    mysql.connection.commit()
+    cursor.close()
+    return jsonify({"wynik": "Zaktualizowano FCM!"}),214
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', debug=True)
