@@ -85,9 +85,11 @@ def wyslijHarmo(ID):
 def noweHarmo(IDuser):
     nazwa = request.json.get("nazwa")
     dni = request.json.get("dniD")
+    if "'" in str(dni):
+        dni = json.dumps(dni)
     if IDuser and nazwa and dni:
         cursor = mysql.connection.cursor()
-        cursor.execute(f"INSERT INTO harmonogram (nazwa, dni, uzytkownik) VALUES ('{nazwa}', '{dni}',{IDuser})")
+        cursor.execute(f"INSERT INTO harmonogram (nazwa, dni, uzytkownik) VALUES (%s, %s,{IDuser})", (nazwa, dni))
         mysql.connection.commit()
         cursor.close()
         return jsonify({"message" :"Udalo sie dodać nowy plan do harmonogramu!"}),204
@@ -98,9 +100,12 @@ def noweHarmo(IDuser):
 def edytujHarmo(ID):
     nazwa = request.json.get("nazwa")
     dni = request.json.get("dniD")
+    print(list(dni.keys()))
+    if "'" in str(dni):
+        dni = json.dumps(dni)
     if ID:
         cursor = mysql.connection.cursor()
-        cursor.execute(f"UPDATE harmonogram SET nazwa='{nazwa}', dni='{dni}' WHERE ID={ID}")
+        cursor.execute(f"UPDATE harmonogram SET nazwa=%s, dni=%s WHERE ID={ID}", (nazwa, dni))
         mysql.connection.commit()
         cursor.close()
         return jsonify({"message":"Udalo sie wykonac zadanie!"}), 205

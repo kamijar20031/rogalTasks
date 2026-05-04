@@ -5,6 +5,7 @@ import datetime
 import discord
 import firebase_admin
 from firebase_admin import credentials, messaging
+import json
 
 load_dotenv()
 cred = credentials.Certificate("firebase.json")
@@ -30,48 +31,54 @@ mycursor = mydb.cursor()
 if current.strftime("%H")=='03':
     mycursor.execute("SELECT * FROM harmonogram;")
     harmoData = mycursor.fetchall()
-    dayDict = {"Monday" : "a", "Tuesday": "b", "Wednesday" : "c", "Thursday" : "d", "Friday" : "e"}
     for row in harmoData:
         name = row[1]
-        times = row[2].split(",")
+        dni = json.loads(row[2])
         user = row[3]
+        id = row[0]
+        lastAdded = f"{row[5]:%Y-%m-%d}"
+        if (dni["type"]=="daily"):
+            timeStart = datetime.datetime.strptime(dni["date"], "%Y-%m-%d")
+            if current>timeStart:
+                lastAdded = datetime.datetime.strptime(lastAdded, "%Y-%m-%d")
+                interval = int(dni["interval"])
+                if (current >=  lastAdded +  datetime.timedelta(days=interval) or (f"{current:%Y-%m-%d}"==f"{timeStart:%Y-%m-%d}")):
+                    date = f"{current:%Y-%m-%d} {dni["time"]}"
+                    nazwa = f"{name} - {date}"
+                    sql = f"INSERT INTO zadania (status, data, nazwa, parentID, uzytkownik) VALUES (0, '{date}', '{nazwa}', 0, {user});"
+                    mycursor.execute(sql)
+                    sql = f"UPDATE harmonogram SET lastAdded='{date}' WHERE ID={id};"
+                    mycursor.execute(sql)
+        else:
+            days = dni["days"]
+            lastAdded = datetime.datetime.strptime(lastAdded, "%Y-%m-%d")
+            if len(days)>0:
+                interval = int(dni["interval"])
+                if current < lastAdded-datetime.timedelta(days=lastAdded.weekday())+ datetime.timedelta(days=7) or current >= lastAdded-datetime.timedelta(days=lastAdded.weekday())+ datetime.timedelta(days=7*interval):
+                    dayID = current.weekday()
+                    print(current, lastAdded-datetime.timedelta(days=lastAdded.weekday())+ datetime.timedelta(days=7))
+                    for day in days:
+                        if (dayID == day["id"]):
+                            godzina = f"{day["hour"]:02d}:{day["minute"]:02d}"
+                            date = f"{current:%Y-%m-%d} {godzina}"
+                            nazwa = f"{name} - {date}"
+                            sql = f"INSERT INTO zadania (status, data, nazwa, parentID, uzytkownik) VALUES (0, '{date}', '{nazwa}', 0, {user});"
+                            mycursor.execute(sql)
+                    if dayID == days[0]:
+                        date = current-datetime.timedelta(days=current.weekday())
+                        date = f"{date:%Y-%m-%d} 00:00:00"
+                        sql = f"UPDATE harmonogram SET lastAdded='{date}' WHERE ID={id};"
+                        mycursor.execute(sql)
 
-        unpack = []
-        dayName = current.strftime("%A")
-        let = dayDict[dayName]
-        for code in times:
-            letter = code[0]
-            if letter == let:
-                unpack.append(int(code[1:]))
-        unpack.sort()
-        unpack.append(0)
+    mydb.commit()
 
-        new = []
-        lent = len(unpack)
-        first = unpack[0]
-        # Zamiana danych na format XX:00-YY:00
-        for i in range (lent):
-            if i>0:
-                if unpack[i] != unpack[i-1]+1:
-                    if unpack[i-1] !=first:
-                        new.append(f"{first+9}:00-{unpack[i-1]+10}:00")
-                    else:
-                        new.append(f"{first+9}:00-{first+10}:00")
-                    first = unpack[i]
-        for hours in new:
-            date = f"{current.strftime("%Y-%m-%d")} {hours[:5]}"
-            nazwa = f"{name} - {hours}"
-            sql = f"INSERT INTO zadania (status, data, nazwa, parentID, uzytkownik) VALUES (0, '{date}', '{nazwa}', 0, {user});"
-            mycursor.execute(sql)
-        mydb.commit()
-
-mycursor.execute("SELECT ID, ilePowiadomien, discord FROM uzytkownicy;")
+mycursor.execute("SELECT ID, ilePowiadomien, discord, androidToken FROM uzytkownicy;")
 userData = mycursor.fetchall()
 firebase_admin.initialize_app(cred)
 
 messageMap = {}
 for user in userData:
-    if int(user[1])!=0 and int(user[2]!=0):
+    if int(user[1])!=0 and (int(user[2]!=0) or user[3]!=""):
         # Generowanie godzin wysylania na bazie podanych ilosci powiadomien
         lst = []
         for j in range(int(user[1])):
@@ -88,7 +95,7 @@ for user in userData:
                 # To bedzie zmieniane u kazdego uzytkownika
                 discordID = zadanie[2]
                 androidToken = zadanie[4]
-                if discordID!=0:
+                if discordID!=0 or androidToken!="":
                     parent = ""
                     if zadanie[3]!=None:
                         parent = f" o rodzicu {zadanie[3]}"
@@ -108,12 +115,13 @@ for user in userData:
                     parent = f" o rodzicu {zadanie[3]}"
                 discordID = zadanie[2]
                 androidToken = zadanie[4]
-                if discordID!=0:
+                if discordID!=0 or androidToken!="":
                     msg = f"Pamiętaj o wykonaniu swojego zaległego zadania {zadanie[0]} z dnia {zadanie[1]}{parent}!"
                     if not user[0] in messageMap.keys():
                         messageMap[user[0]] = [discordID, msg, androidToken]
                     else:
                         messageMap[user[0]][1] += f"\n{msg}"
+
 
 
 for key, val in messageMap.items():

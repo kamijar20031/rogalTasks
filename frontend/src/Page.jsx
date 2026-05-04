@@ -33,17 +33,6 @@ function Page({backendLink, user, setCookie}) {
         const response = await fetch(`${backendLink}harmonogram/${user}`);
         const data = await response.json();
         var newData = data.harmonogram;
-        for (var i=0; i<data.harmonogram.length;i++)
-        {
-          var days = data.harmonogram[i]["dni"]
-          if (days!=";")
-            days = days.split(",");
-          else
-            days= [];
-
-          newData[i].dni = days;
-          
-        }
         harmoSet(newData);
     }
 

@@ -1,6 +1,9 @@
-[2026-04-29 20:34:52 +0200] [1435] [INFO] Starting gunicorn 23.0.0
-[2026-04-29 20:34:52 +0200] [1435] [INFO] Listening at: http://192.168.1.101:5000 (1435)
-[2026-04-29 20:34:52 +0200] [1435] [INFO] Using worker: sync
-[2026-04-29 20:34:52 +0200] [1484] [INFO] Booting worker with pid: 1484
-[2026-05-01 10:56:32 +0200] [1484] [INFO] Parent changed, shutting down: <Worker 1484>
-[2026-05-01 10:56:32 +0200] [1484] [INFO] Worker exiting (pid: 1484)
+[2026-05-02 22:45:53 +0200] [26845] [INFO] Starting gunicorn 25.3.0
+[2026-05-02 22:45:53 +0200] [26845] [INFO] Listening at: http://192.168.1.101:5000 (26845)
+[2026-05-02 22:45:53 +0200] [26845] [INFO] Using worker: sync
+[2026-05-02 22:45:53 +0200] [26855] [INFO] Booting worker with pid: 26855
+[2026-05-02 22:45:53 +0200] [26845] [INFO] Control socket listening at /home/rogal/.gunicorn/gunicorn.ctl
+[2026-05-02 22:46:46 +0200] [26845] [INFO] Handling signal: term
+[2026-05-02 22:46:46 +0200] [26855] [INFO] Worker exiting (pid: 26855)
+[2026-05-02 22:46:46 +0200] [26845] [INFO] Worker (pid:26855) was sent SIGTERM!
+[2026-05-02 22:46:46 +0200] [26845] [INFO] Shutting down: Master

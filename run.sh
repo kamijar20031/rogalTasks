@@ -1,7 +1,7 @@
 #!/bin/bash
 
 cd ~/projekty/rogalTasks
-source venv/bin/activate
+source backend/venv/bin/activate
 cd frontend
 touch output.log
 serve -s dist -l 3000 > output.log 2>&1 &
